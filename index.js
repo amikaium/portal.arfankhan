@@ -93,6 +93,15 @@ export default {
         const targetApi = new URL(actualApiUrl);
         const apiReq = new Request(targetApi.toString(), request);
         apiReq.headers.set("Host", targetApi.host); apiReq.headers.set("Origin", TARGET_DOMAIN); apiReq.headers.set("Referer", TARGET_DOMAIN + "/");
+        
+        // Handle POST body correctly
+        if (request.method !== 'GET' && request.method !== 'HEAD') {
+            const reqBody = await request.clone().arrayBuffer();
+            apiReq = new Request(targetApi.toString(), {
+                method: request.method, headers: apiReq.headers, body: reqBody, redirect: 'follow'
+            });
+        }
+        
         const apiRes = await fetch(apiReq);
         let newApiRes;
         const contentType = apiRes.headers.get("content-type") || "";
@@ -153,31 +162,15 @@ export default {
 
                 var sc = document.createElement('script'); sc.src = '/__secure_core.js'; document.head.appendChild(sc);
 
-                setInterval(function() {
-                    document.querySelectorAll('.signup').forEach(function(btn) {
-                        if(btn.href !== 'https://playpbu.com/') { btn.href = 'https://playpbu.com'; btn.onclick = function(e) { e.preventDefault(); window.location.href = 'https://playpbu.com'; }; }
-                    });
-                }, 500);
-
                 window.__SERVER_VAULT__ = ${JSON.stringify(vaultData)};
 
-                // 🚀 React-Buster Autofill Engine 🚀
+                // 🚀 React-Buster & API Auto-Login Engine 🚀
                 function simulateHumanTyping(element, text) {
                     if(!element) return;
-                    
-                    // 1. Bypass React's Value Tracker
                     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-                    if (nativeInputValueSetter) {
-                        nativeInputValueSetter.call(element, text);
-                    } else {
-                        element.value = text;
-                    }
-                    
-                    // 2. Dispatch all possible events
+                    if (nativeInputValueSetter) { nativeInputValueSetter.call(element, text); } else { element.value = text; }
                     element.dispatchEvent(new Event('input', { bubbles: true }));
                     element.dispatchEvent(new Event('change', { bubbles: true }));
-                    element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
-                    element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }));
                 }
 
                 setInterval(function() {
@@ -191,6 +184,8 @@ export default {
                     let uSel = siteConfig.user ? siteConfig.user : 'input[name="username"], input[type="text"]:not([readonly])';
                     let pSel = siteConfig.pass ? siteConfig.pass : 'input[type="password"]';
                     let loginApiUrl = siteConfig.loginApi || '';
+                    let apiUserKey = siteConfig.apiUserKey || 'id';
+                    let apiPassKey = siteConfig.apiPassKey || 'password';
 
                     const userInp = document.querySelector(uSel);
                     const passInp = document.querySelector(pSel);
@@ -210,8 +205,7 @@ export default {
 
                         userInp.addEventListener('focus', function(e) {
                             if(Object.keys(accounts).length > 0) {
-                                e.preventDefault();
-                                userInp.blur(); 
+                                e.preventDefault(); userInp.blur(); 
                                 
                                 modalContent.innerHTML = '<div style="padding:16px 20px; font-size:18px; color:#fff; background:#2C2C2E; border-bottom:1px solid #38383A; font-weight:600; display:flex; justify-content:space-between; align-items:center;"><span>Select Account</span><span id="close-autofill" style="color:#FF453A; cursor:pointer; font-size:15px; font-weight:bold; padding:5px;">Close</span></div>';
                                 
@@ -223,16 +217,57 @@ export default {
                                     item.style.cssText = 'padding:18px 16px; margin-bottom:10px; border-radius:5px; font-size:18px; color:#FFFFFF; background:#2C2C2E; display:flex; align-items:center; cursor:pointer; border:1px solid #38383A; transition:background 0.2s; font-weight:500;';
                                     item.innerHTML = '<svg style="width:22px;height:22px;margin-right:12px;color:#0A84FF;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' + user;
                                     
-                                    item.onclick = function() { 
+                                    item.onclick = async function() { 
                                         simulateHumanTyping(userInp, user);
                                         simulateHumanTyping(passInp, accounts[user]);
+                                        modalOverlay.style.display = 'none';
                                         
-                                        // Optional: If Login API provided, user can build logic here
+                                        // 💥 API Login Execution 💥
                                         if(loginApiUrl) {
-                                            console.log("Custom Login API detected: ", loginApiUrl);
-                                        }
+                                            let toast = document.createElement('div');
+                                            toast.innerHTML = '🔄 Authenticating via API...';
+                                            toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); color:#fff; padding:12px 24px; border-radius:5px; font-size:15px; font-weight:600; z-index:999999; border: 1px solid #38383A; box-shadow:0 10px 25px rgba(0,0,0,0.5);';
+                                            document.body.appendChild(toast);
 
-                                        modalOverlay.style.display = 'none'; 
+                                            let payload = {};
+                                            payload[apiUserKey] = user;
+                                            payload[apiPassKey] = accounts[user];
+                                            
+                                            // Bypass CORS
+                                            let proxyFetchUrl = loginApiUrl.startsWith('http') ? '/__api_proxy/' + loginApiUrl : loginApiUrl;
+
+                                            try {
+                                                let res = await fetch(proxyFetchUrl, {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*' },
+                                                    body: JSON.stringify(payload)
+                                                });
+                                                
+                                                if(res.ok) {
+                                                    toast.innerHTML = '✅ API Login Success! Reloading...';
+                                                    toast.style.background = 'rgba(48,209,88,0.95)';
+                                                    setTimeout(() => window.location.reload(), 1500);
+                                                } else {
+                                                    throw new Error("Bad Auth");
+                                                }
+                                            } catch(err) {
+                                                toast.innerHTML = '❌ API Failed. Trying Auto-Click...';
+                                                toast.style.background = 'rgba(255,69,58,0.95)';
+                                                setTimeout(() => toast.remove(), 2500);
+                                                
+                                                // Fallback Auto-Click
+                                                setTimeout(() => {
+                                                    let btn = document.querySelector('button[type="submit"], button.login-btn, #loginBtn, .btn-login, button.btn');
+                                                    if(btn) btn.click();
+                                                }, 1000);
+                                            }
+                                        } else {
+                                            // Direct Auto-Click if no API
+                                            setTimeout(() => {
+                                                let btn = document.querySelector('button[type="submit"], button.login-btn, #loginBtn, .btn-login, button.btn');
+                                                if(btn) btn.click();
+                                            }, 500);
+                                        }
                                     };
                                     listContainer.appendChild(item);
                                 }
@@ -259,7 +294,7 @@ export default {
   },
 
   // ==========================================
-  // ফ্রন্ট-এন্ড পোর্টাল ডিজাইন (Config Settings সহ)
+  // ফ্রন্ট-এন্ড পোর্টাল ডিজাইন (Smart Config সহ)
   // ==========================================
   servePortal() {
       const html = `
@@ -298,22 +333,25 @@ export default {
               
               /* Modal Styles */
               .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 999; display: none; align-items: center; justify-content: center; padding: 0 10px; box-sizing: border-box;}
-              .modal-content { background: #1C1C1E; width: 100%; max-width: 500px; border-radius: 5px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box; border: 1px solid #38383A;}
-              .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center;}
+              .modal-content { background: #1C1C1E; width: 100%; max-width: 500px; border-radius: 5px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box; border: 1px solid #38383A; max-height: 90vh; display: flex; flex-direction: column;}
+              .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-shrink:0;}
               .modal-header h3 { margin: 0; font-size: 18px; color: #fff; display:flex; align-items:center; gap:8px;}
               .close-btn { background: none; border: none; color: #FF453A; font-size: 15px; cursor: pointer; font-weight: bold; padding: 5px;}
               
-              .pass-list { max-height: 250px; overflow-y: auto; margin-bottom: 15px; }
+              .pass-list { overflow-y: auto; margin-bottom: 15px; }
               .pass-item { display: flex; justify-content: space-between; background: #2C2C2E; padding: 12px; border-radius: 5px; margin-bottom: 8px; align-items: center; border: 1px solid #38383A;}
               .pass-actions { display: flex; gap: 10px; }
               .action-icon { background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;}
               .action-icon:active { opacity: 0.5; }
               
+              .add-form { overflow-y: auto; padding-right: 5px; }
               .add-form label { color:#8E8E93; font-size:12px; margin-bottom:6px; display:block; font-weight:600;}
               .add-form select, .add-form input { width: 100%; background: #2C2C2E; border: 1px solid #38383A; color: #fff; padding: 12px; border-radius: 5px; margin-bottom: 15px; box-sizing: border-box; font-size: 15px;}
               .add-form input:focus, .add-form select:focus { outline: none; border-color: #0A84FF; }
               .add-form button { width: 100%; background: #30D158; color: #fff; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 15px; transition: transform 0.1s;}
               .add-form button:active { background: #28B44A; transform: scale(0.98);}
+              
+              .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
           </style>
       </head>
       <body>
@@ -340,18 +378,34 @@ export default {
                       <h3><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Site Configuration</h3>
                       <button class="close-btn" onclick="closeConfigModal()">Close</button>
                   </div>
-                  <div class="add-form" style="max-height: 60vh; overflow-y: auto;">
+                  <div class="add-form">
                       <label>Select Target Site</label>
                       <select id="config-site-select" onchange="loadConfigData()"></select>
                       
-                      <label>Username Box Selector</label>
-                      <input type="text" id="config-user-sel" placeholder="e.g. #username or .user-input">
+                      <div class="grid-2">
+                          <div>
+                              <label>Username Selector</label>
+                              <input type="text" id="config-user-sel" placeholder="e.g. #username">
+                          </div>
+                          <div>
+                              <label>Password Selector</label>
+                              <input type="text" id="config-pass-sel" placeholder="e.g. #password">
+                          </div>
+                      </div>
+
+                      <label>Login API URL (Bypasses UI)</label>
+                      <input type="text" id="config-login-api" placeholder="e.g. https://liveapi247.live/api2/Login">
                       
-                      <label>Password Box Selector</label>
-                      <input type="text" id="config-pass-sel" placeholder="e.g. #password or .pass-input">
-                      
-                      <label>Login API URL (Optional - Bypasses UI Login)</label>
-                      <input type="text" id="config-login-api" placeholder="/api/v1/auth/login">
+                      <div class="grid-2">
+                          <div>
+                              <label>API Username Key</label>
+                              <input type="text" id="config-api-user-key" placeholder="Default: id">
+                          </div>
+                          <div>
+                              <label>API Password Key</label>
+                              <input type="text" id="config-api-pass-key" placeholder="Default: password">
+                          </div>
+                      </div>
                       
                       <button onclick="saveConfig()" style="margin-top:10px;">Save Configuration</button>
                   </div>
@@ -475,6 +529,8 @@ export default {
                   document.getElementById('config-user-sel').value = '';
                   document.getElementById('config-pass-sel').value = '';
                   document.getElementById('config-login-api').value = '';
+                  document.getElementById('config-api-user-key').value = '';
+                  document.getElementById('config-api-pass-key').value = '';
                   document.getElementById('config-modal').style.display = 'flex';
               }
 
@@ -485,29 +541,27 @@ export default {
                   document.getElementById('config-user-sel').value = config.user || '';
                   document.getElementById('config-pass-sel').value = config.pass || '';
                   document.getElementById('config-login-api').value = config.loginApi || '';
+                  document.getElementById('config-api-user-key').value = config.apiUserKey || '';
+                  document.getElementById('config-api-pass-key').value = config.apiPassKey || '';
               }
 
               function saveConfig() {
                   const site = document.getElementById('config-site-select').value;
                   if(!site) return alert("Please select a site from the list!");
                   
-                  const uSel = document.getElementById('config-user-sel').value.trim();
-                  const pSel = document.getElementById('config-pass-sel').value.trim();
-                  const apiSel = document.getElementById('config-login-api').value.trim();
-                  
                   if(!vaultDB[site]['__config']) vaultDB[site]['__config'] = {};
-                  vaultDB[site]['__config'].user = uSel;
-                  vaultDB[site]['__config'].pass = pSel;
-                  vaultDB[site]['__config'].loginApi = apiSel;
+                  vaultDB[site]['__config'].user = document.getElementById('config-user-sel').value.trim();
+                  vaultDB[site]['__config'].pass = document.getElementById('config-pass-sel').value.trim();
+                  vaultDB[site]['__config'].loginApi = document.getElementById('config-login-api').value.trim();
+                  vaultDB[site]['__config'].apiUserKey = document.getElementById('config-api-user-key').value.trim();
+                  vaultDB[site]['__config'].apiPassKey = document.getElementById('config-api-pass-key').value.trim();
                   
                   syncData();
                   closeConfigModal();
                   alert("✅ Configuration successfully saved for " + site.replace(/^ag\\./i, ''));
               }
 
-              function closeConfigModal() {
-                  document.getElementById('config-modal').style.display = 'none';
-              }
+              function closeConfigModal() { document.getElementById('config-modal').style.display = 'none'; }
 
               // ==========================================
               // 🔑 Password Modal Logic
