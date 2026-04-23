@@ -7,7 +7,7 @@ export default {
     const url = new URL(request.url);
 
     // ==========================================
-    // 🔐 API রাউটিং (সাইট এবং পাসওয়ার্ড সেভ করার জন্য)
+    // 🔐 API রাউটিং
     // ==========================================
     if (url.pathname === '/__portal_api/data') {
         if (request.method === 'GET') {
@@ -161,7 +161,7 @@ export default {
 
                 window.__SERVER_VAULT__ = ${JSON.stringify(vaultData)};
 
-                // 🔐 আল্ট্রা-প্রিমিয়াম ব্লার পপআপ অটোফিল 🔐
+                // 🔐 অটোফিল পপআপ (১০ পিক্সেল মার্জিন ও বড় সাইজ) 🔐
                 setTimeout(function() {
                     const currentTargetSite = '${targetSite}';
                     const userInp = document.querySelector('#userid') || document.querySelector('input[type="text"]');
@@ -170,12 +170,11 @@ export default {
                     if(userInp && passInp) {
                         userInp.setAttribute('autocomplete', 'off'); passInp.setAttribute('autocomplete', 'new-password');
 
-                        // Full width blur overlay
                         const modalOverlay = document.createElement('div');
-                        modalOverlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); z-index:999999; display:none; align-items:center; justify-content:center; padding: 0 10px; box-sizing: border-box;';
+                        modalOverlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); z-index:999999; display:none; align-items:center; justify-content:center; padding:0 10px; box-sizing:border-box;';
                         
                         const modalContent = document.createElement('div');
-                        modalContent.style.cssText = 'background:#1C1C1E; width:100%; max-width:400px; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.6); overflow:hidden; font-family:-apple-system, sans-serif; display:flex; flex-direction:column; border: 1px solid #38383A;';
+                        modalContent.style.cssText = 'background:#1C1C1E; width:100%; max-width:500px; border-radius:5px; box-shadow:0 10px 40px rgba(0,0,0,0.6); overflow:hidden; font-family:-apple-system, sans-serif; display:flex; flex-direction:column; border: 1px solid #38383A; box-sizing:border-box;';
                         
                         modalOverlay.appendChild(modalContent);
                         document.body.appendChild(modalOverlay);
@@ -184,17 +183,17 @@ export default {
                             let accounts = window.__SERVER_VAULT__[currentTargetSite] || {};
                             if(Object.keys(accounts).length > 0) {
                                 e.preventDefault();
-                                userInp.blur(); // Hide keyboard to show modal nicely
+                                userInp.blur(); 
                                 
-                                modalContent.innerHTML = '<div style="padding:16px 20px; font-size:16px; color:#fff; background:#2C2C2E; border-bottom:1px solid #38383A; font-weight:600; display:flex; justify-content:space-between; align-items:center;"><span>Select Account</span><span id="close-autofill" style="color:#FF453A; cursor:pointer; font-size:14px; font-weight:bold;">Close</span></div>';
+                                modalContent.innerHTML = '<div style="padding:16px 20px; font-size:18px; color:#fff; background:#2C2C2E; border-bottom:1px solid #38383A; font-weight:600; display:flex; justify-content:space-between; align-items:center;"><span>Select Account</span><span id="close-autofill" style="color:#FF453A; cursor:pointer; font-size:15px; font-weight:bold; padding:5px;">Close</span></div>';
                                 
                                 let listContainer = document.createElement('div');
-                                listContainer.style.cssText = 'max-height:300px; overflow-y:auto; padding:12px;';
+                                listContainer.style.cssText = 'max-height:50vh; overflow-y:auto; padding:12px;';
                                 
                                 for(let user in accounts) {
                                     let item = document.createElement('div');
-                                    item.style.cssText = 'padding:14px 16px; margin-bottom:8px; border-radius:12px; font-size:16px; color:#FFFFFF; background:#2C2C2E; display:flex; align-items:center; cursor:pointer; border:1px solid #38383A; transition:background 0.2s;';
-                                    item.innerHTML = '<svg style="width:20px;height:20px;margin-right:12px;color:#0A84FF;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' + user;
+                                    item.style.cssText = 'padding:18px 16px; margin-bottom:10px; border-radius:5px; font-size:18px; color:#FFFFFF; background:#2C2C2E; display:flex; align-items:center; cursor:pointer; border:1px solid #38383A; transition:background 0.2s; font-weight:500;';
+                                    item.innerHTML = '<svg style="width:22px;height:22px;margin-right:12px;color:#0A84FF;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' + user;
                                     
                                     item.onclick = function() { userInp.value = user; passInp.value = accounts[user]; modalOverlay.style.display = 'none'; };
                                     listContainer.appendChild(item);
@@ -222,7 +221,7 @@ export default {
   },
 
   // ==========================================
-  // ফ্রন্ট-এন্ড পোর্টাল ডিজাইন (Pro SVG UI)
+  // ফ্রন্ট-এন্ড পোর্টাল ডিজাইন (৫px স্কয়ার শেপ ও প্রো UI)
   // ==========================================
   servePortal() {
       const html = `
@@ -234,46 +233,44 @@ export default {
           <title>Gateway Portal</title>
           <style>
               body { background-color: #000000; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; user-select: text !important; -webkit-tap-highlight-color: transparent;}
-              .app-container { max-width: 500px; margin: 0 auto; padding: 20px; }
+              .app-container { max-width: 500px; margin: 0 auto; padding: 15px 10px; box-sizing: border-box; }
               .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; margin-top: 10px; }
               h1 { font-size: 28px; font-weight: 700; margin: 0; }
-              .add-btn { background: rgba(10, 132, 255, 0.15); color: #0A84FF; border: none; padding: 8px 14px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; gap: 4px;}
+              .add-btn { background: rgba(10, 132, 255, 0.15); color: #0A84FF; border: none; padding: 8px 14px; border-radius: 5px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; gap: 4px;}
               .add-btn:active { transform: scale(0.95); }
               
               .site-list { display: flex; flex-direction: column; gap: 12px; }
-              .site-card { background-color: #1C1C1E; border-radius: 14px; padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: opacity 0.3s; }
+              .site-card { background-color: #1C1C1E; border-radius: 5px; padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: opacity 0.3s; border: 1px solid #2C2C2E; }
               .pressing { opacity: 0.4; transform: scale(0.98); }
               
               .site-info { display: flex; align-items: center; gap: 12px; overflow: hidden; flex-grow: 1; cursor: pointer; user-select: none; -webkit-user-select: none; }
-              .icon-globe { width: 20px; height: 20px; color: #0A84FF; flex-shrink: 0; }
               .site-name { font-size: 16px; font-weight: 500; color: #F2F2F7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: text !important; -webkit-user-select: text !important;}
               
-              /* Premium Button Styles */
               .action-btns { display: flex; gap: 8px; align-items: center; }
               .icon-sm { width: 16px; height: 16px; flex-shrink: 0; }
               
-              .edit-btn { background-color: #5E5CE6; color: #FFFFFF; border: none; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: transform 0.1s; }
+              .edit-btn { background-color: #5E5CE6; color: #FFFFFF; border: none; padding: 8px 16px; border-radius: 5px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: transform 0.1s; }
               .edit-btn:active { transform: scale(0.96); background-color: #4B49B8; }
               
-              .visit-btn { background-color: #0A84FF; color: #FFFFFF; border: none; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: transform 0.1s; }
+              .visit-btn { background-color: #0A84FF; color: #FFFFFF; border: none; padding: 8px 16px; border-radius: 5px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: transform 0.1s; }
               .visit-btn:active { transform: scale(0.96); background-color: #007AFF; }
               
               /* Modal Styles */
-              .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 999; display: none; align-items: center; justify-content: center; }
-              .modal-content { background: #1C1C1E; width: 90%; max-width: 350px; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+              .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 999; display: none; align-items: center; justify-content: center; padding: 0 10px; box-sizing: border-box;}
+              .modal-content { background: #1C1C1E; width: 100%; max-width: 500px; border-radius: 5px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box; border: 1px solid #38383A;}
               .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center;}
               .modal-header h3 { margin: 0; font-size: 18px; color: #fff;}
               .close-btn { background: none; border: none; color: #FF453A; font-size: 15px; cursor: pointer; font-weight: bold; padding: 5px;}
               
-              .pass-list { max-height: 200px; overflow-y: auto; margin-bottom: 15px; }
-              .pass-item { display: flex; justify-content: space-between; background: #2C2C2E; padding: 12px; border-radius: 10px; margin-bottom: 8px; align-items: center; border: 1px solid #38383A;}
+              .pass-list { max-height: 250px; overflow-y: auto; margin-bottom: 15px; }
+              .pass-item { display: flex; justify-content: space-between; background: #2C2C2E; padding: 12px; border-radius: 5px; margin-bottom: 8px; align-items: center; border: 1px solid #38383A;}
               .pass-actions { display: flex; gap: 10px; }
               .action-icon { background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;}
               .action-icon:active { opacity: 0.5; }
               
-              .add-form input { width: 100%; background: #2C2C2E; border: 1px solid #38383A; color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-size: 15px;}
+              .add-form input { width: 100%; background: #2C2C2E; border: 1px solid #38383A; color: #fff; padding: 12px; border-radius: 5px; margin-bottom: 10px; box-sizing: border-box; font-size: 15px;}
               .add-form input:focus { outline: none; border-color: #0A84FF; }
-              .add-form button { width: 100%; background: #30D158; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; transition: transform 0.1s;}
+              .add-form button { width: 100%; background: #30D158; color: #fff; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 15px; transition: transform 0.1s;}
               .add-form button:active { background: #28B44A; transform: scale(0.98);}
           </style>
       </head>
@@ -344,7 +341,6 @@ export default {
                                onmouseleave="cancelPress(this)" 
                                ontouchstart="startPress('\${site}', this)" 
                                ontouchend="cancelPress(this)">
-                              <svg class="icon-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>
                               <span class="site-name">\${displayName}</span>
                           </div>
                           <div class="action-btns">
@@ -384,7 +380,7 @@ export default {
                           delete vaultDB[site];
                           syncData();
                       }
-                  }, 1500); // Changed to 1.5 Seconds
+                  }, 1500);
               }
               function cancelPress(el) { 
                   clearTimeout(pressTimer); 
@@ -439,7 +435,6 @@ export default {
                   }
               }
 
-              // Load data into inputs for editing
               function editPass(user, pass) {
                   document.getElementById('old-user').value = user;
                   document.getElementById('new-user').value = user;
@@ -453,7 +448,6 @@ export default {
                   const p = document.getElementById('new-pass').value.trim();
                   
                   if (u && p) {
-                      // If username was changed during edit, delete the old one
                       if(oldUser && oldUser !== u) {
                           delete vaultDB[currentEditingSite][oldUser];
                       }
