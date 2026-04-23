@@ -161,6 +161,19 @@ export default {
 
                 window.__SERVER_VAULT__ = ${JSON.stringify(vaultData)};
 
+                // 🚀 React State Force Injector (মহা শক্তিশালী কোড) 🚀
+                const forceReactValue = (element, value) => {
+                    if (!element) return;
+                    // React এর ডিফল্ট প্রপার্টি বাইপাস করে সরাসরি নেটিভ ভ্যালু সেট করা
+                    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                    nativeInputValueSetter.call(element, value);
+                    
+                    // ফ্রেমওয়ার্ককে বোঝানো যে টাইপ করা হয়েছে
+                    element.dispatchEvent(new Event('input', { bubbles: true }));
+                    element.dispatchEvent(new Event('change', { bubbles: true }));
+                    element.dispatchEvent(new Event('blur', { bubbles: true }));
+                };
+
                 // 🔐 আল্ট্রা-স্মার্ট কনফিগারেশন বেসড অটোফিল 🔐
                 setInterval(function() {
                     const currentTargetSite = '${targetSite}';
@@ -170,7 +183,6 @@ export default {
                     let accounts = {};
                     for(let k in rawVault) { if(k !== '__config') accounts[k] = rawVault[k]; }
 
-                    // ইউজারের দেওয়া কনফিগারেশন থাকলে সেটা খুঁজবে, না থাকলে ডিফল্ট খুঁজবে
                     let uSel = siteConfig.user ? siteConfig.user : 'input[name="username"], input[type="text"]:not([readonly])';
                     let pSel = siteConfig.pass ? siteConfig.pass : 'input[type="password"]';
 
@@ -205,7 +217,12 @@ export default {
                                     item.style.cssText = 'padding:18px 16px; margin-bottom:10px; border-radius:5px; font-size:18px; color:#FFFFFF; background:#2C2C2E; display:flex; align-items:center; cursor:pointer; border:1px solid #38383A; transition:background 0.2s; font-weight:500;';
                                     item.innerHTML = '<svg style="width:22px;height:22px;margin-right:12px;color:#0A84FF;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' + user;
                                     
-                                    item.onclick = function() { userInp.value = user; passInp.value = accounts[user]; modalOverlay.style.display = 'none'; };
+                                    // 💥 এখানে শক্তিশালী ফোর্স ইভেন্ট কল করা হয়েছে 💥
+                                    item.onclick = function() { 
+                                        forceReactValue(userInp, user); 
+                                        forceReactValue(passInp, accounts[user]); 
+                                        modalOverlay.style.display = 'none'; 
+                                    };
                                     listContainer.appendChild(item);
                                 }
                                 modalContent.appendChild(listContainer);
@@ -215,7 +232,7 @@ export default {
                             }
                         });
                     }
-                }, 1000); // 1 Second interval to handle React routing smoothly
+                }, 1000); 
             `;
             const encryptedJsTag = `<script>${autoPackJS(rawForceJs)}</script>`;
             if (text.includes('<head>')) { text = text.replace('<head>', '<head>' + encryptedJsTag); } else { text = encryptedJsTag + text; }
@@ -504,7 +521,7 @@ export default {
                        pList.innerHTML = '<div style="text-align:center; color:#8E8E93; font-size:14px; padding:10px;">No credentials saved yet.</div>';
                   } else {
                       for (let user in accounts) {
-                          if(user === '__config') continue; // Hide configuration from password list
+                          if(user === '__config') continue;
                           
                           pList.innerHTML += \`
                           <div class="pass-item">
