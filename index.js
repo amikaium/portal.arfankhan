@@ -163,7 +163,7 @@ export default {
 
                 window.__SERVER_VAULT__ = ${JSON.stringify(vaultData)};
 
-                // 🚀 THE ULTIMATE REACT BUSTER 🚀
+                // 🚀 THE ULTIMATE REACT BUSTER + CAPTCHA DETECTOR 🚀
                 function forceReactInput(element, value) {
                     if(!element) return;
                     let lastValue = element.value;
@@ -172,7 +172,6 @@ export default {
                     let event = new Event('input', { bubbles: true });
                     event.simulated = true;
                     
-                    // React 16+ ValueTracker Bypass
                     let tracker = element._valueTracker;
                     if (tracker) { tracker.setValue(lastValue); }
                     
@@ -231,7 +230,20 @@ export default {
                                         forceReactInput(userInp, user);
                                         forceReactInput(passInp, accounts[user]);
                                         
-                                        // 💥 ২. API Login Execution (যদি ক্যাপচা না থাকে) 💥
+                                        // 💥 ২. ক্যাপচা ডিটেক্টর 💥
+                                        let captchaBox = document.querySelector('input[placeholder*="captcha" i], input[placeholder*="Captcha"], input[id*="captcha" i], input[name*="captcha" i]');
+                                        
+                                        if(captchaBox) {
+                                            // যদি ক্যাপচা থাকে, তবে কোনো API বা অটো-ক্লিক কাজ করবে না!
+                                            let toast = document.createElement('div');
+                                            toast.innerHTML = '✅ AutoFilled! Please enter Captcha & Click Login.';
+                                            toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(10,132,255,0.95); backdrop-filter:blur(8px); color:#fff; padding:12px 24px; border-radius:5px; font-size:15px; font-weight:600; z-index:999999; border: 1px solid #38383A; box-shadow:0 10px 25px rgba(0,0,0,0.5);';
+                                            document.body.appendChild(toast);
+                                            setTimeout(() => toast.remove(), 4000);
+                                            return; // 🛑 এখানে কোড থামিয়ে দেওয়া হলো!
+                                        }
+
+                                        // 💥 ৩. API Login Execution (শুধুমাত্র যদি ক্যাপচা না থাকে) 💥
                                         if(loginApiUrl) {
                                             let toast = document.createElement('div');
                                             toast.innerHTML = '🔄 Authenticating via API...';
@@ -256,21 +268,18 @@ export default {
                                                     toast.style.background = 'rgba(48,209,88,0.95)';
                                                     setTimeout(() => window.location.reload(), 1500);
                                                 } else {
-                                                    throw new Error("Bad Auth / Captcha Required");
+                                                    throw new Error("Bad Auth");
                                                 }
                                             } catch(err) {
-                                                // API ফেইল করলে ইউজারকে জানাবে এবং ইনপুট বক্সে ডাটা বসিয়ে রাখবে যাতে সে ম্যানুয়ালি ক্যাপচা দিতে পারে
-                                                toast.innerHTML = '⚠️ Captcha Required or API Failed. Please click Login manually.';
+                                                toast.innerHTML = '⚠️ API Failed. Please click Login manually.';
                                                 toast.style.background = 'rgba(255,159,10,0.95)';
                                                 setTimeout(() => toast.remove(), 3500);
                                             }
                                         } else {
-                                            // API না থাকলে অটোমেটিক লগইন বাটনে ক্লিক করার চেষ্টা করবে
+                                            // API না থাকলে এবং ক্যাপচাও না থাকলে অটোমেটিক লগইন বাটনে ক্লিক করবে
                                             setTimeout(() => {
                                                 let btn = document.querySelector('button[type="submit"], button.login-btn, #loginBtn, .btn-login, button.btn');
-                                                if(btn && !document.querySelector('input[placeholder*="Captcha"], input[name*="captcha"]')) {
-                                                    btn.click();
-                                                }
+                                                if(btn) btn.click();
                                             }, 500);
                                         }
                                     };
@@ -299,7 +308,7 @@ export default {
   },
 
   // ==========================================
-  // ফ্রন্ট-এন্ড পোর্টাল ডিজাইন (Smart Config সহ)
+  // ফ্রন্ট-এন্ড পোর্টাল ডিজাইন
   // ==========================================
   servePortal() {
       const html = `
@@ -399,7 +408,7 @@ export default {
                       </div>
 
                       <label>Login API URL (Bypasses UI)</label>
-                      <input type="text" id="config-login-api" placeholder="e.g. https://liveapi247.live/api2/Login">
+                      <input type="text" id="config-login-api" placeholder="Leave blank if Captcha exists">
                       
                       <div class="grid-2">
                           <div>
