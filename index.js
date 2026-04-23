@@ -91,10 +91,9 @@ export default {
       if (!actualApiUrl.startsWith('http')) actualApiUrl = 'https://' + actualApiUrl;
       try {
         const targetApi = new URL(actualApiUrl);
-        const apiReq = new Request(targetApi.toString(), request);
+        let apiReq = new Request(targetApi.toString(), request);
         apiReq.headers.set("Host", targetApi.host); apiReq.headers.set("Origin", TARGET_DOMAIN); apiReq.headers.set("Referer", TARGET_DOMAIN + "/");
         
-        // Handle POST body correctly
         if (request.method !== 'GET' && request.method !== 'HEAD') {
             const reqBody = await request.clone().arrayBuffer();
             apiReq = new Request(targetApi.toString(), {
@@ -164,12 +163,20 @@ export default {
 
                 window.__SERVER_VAULT__ = ${JSON.stringify(vaultData)};
 
-                // 🚀 React-Buster & API Auto-Login Engine 🚀
-                function simulateHumanTyping(element, text) {
+                // 🚀 THE ULTIMATE REACT BUSTER 🚀
+                function forceReactInput(element, value) {
                     if(!element) return;
-                    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-                    if (nativeInputValueSetter) { nativeInputValueSetter.call(element, text); } else { element.value = text; }
-                    element.dispatchEvent(new Event('input', { bubbles: true }));
+                    let lastValue = element.value;
+                    element.value = value;
+                    
+                    let event = new Event('input', { bubbles: true });
+                    event.simulated = true;
+                    
+                    // React 16+ ValueTracker Bypass
+                    let tracker = element._valueTracker;
+                    if (tracker) { tracker.setValue(lastValue); }
+                    
+                    element.dispatchEvent(event);
                     element.dispatchEvent(new Event('change', { bubbles: true }));
                 }
 
@@ -218,11 +225,13 @@ export default {
                                     item.innerHTML = '<svg style="width:22px;height:22px;margin-right:12px;color:#0A84FF;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' + user;
                                     
                                     item.onclick = async function() { 
-                                        simulateHumanTyping(userInp, user);
-                                        simulateHumanTyping(passInp, accounts[user]);
                                         modalOverlay.style.display = 'none';
                                         
-                                        // 💥 API Login Execution 💥
+                                        // 💥 ১. React-কে হ্যাক করে ডাটা ইনপুট করা 💥
+                                        forceReactInput(userInp, user);
+                                        forceReactInput(passInp, accounts[user]);
+                                        
+                                        // 💥 ২. API Login Execution (যদি ক্যাপচা না থাকে) 💥
                                         if(loginApiUrl) {
                                             let toast = document.createElement('div');
                                             toast.innerHTML = '🔄 Authenticating via API...';
@@ -233,7 +242,6 @@ export default {
                                             payload[apiUserKey] = user;
                                             payload[apiPassKey] = accounts[user];
                                             
-                                            // Bypass CORS
                                             let proxyFetchUrl = loginApiUrl.startsWith('http') ? '/__api_proxy/' + loginApiUrl : loginApiUrl;
 
                                             try {
@@ -248,24 +256,21 @@ export default {
                                                     toast.style.background = 'rgba(48,209,88,0.95)';
                                                     setTimeout(() => window.location.reload(), 1500);
                                                 } else {
-                                                    throw new Error("Bad Auth");
+                                                    throw new Error("Bad Auth / Captcha Required");
                                                 }
                                             } catch(err) {
-                                                toast.innerHTML = '❌ API Failed. Trying Auto-Click...';
-                                                toast.style.background = 'rgba(255,69,58,0.95)';
-                                                setTimeout(() => toast.remove(), 2500);
-                                                
-                                                // Fallback Auto-Click
-                                                setTimeout(() => {
-                                                    let btn = document.querySelector('button[type="submit"], button.login-btn, #loginBtn, .btn-login, button.btn');
-                                                    if(btn) btn.click();
-                                                }, 1000);
+                                                // API ফেইল করলে ইউজারকে জানাবে এবং ইনপুট বক্সে ডাটা বসিয়ে রাখবে যাতে সে ম্যানুয়ালি ক্যাপচা দিতে পারে
+                                                toast.innerHTML = '⚠️ Captcha Required or API Failed. Please click Login manually.';
+                                                toast.style.background = 'rgba(255,159,10,0.95)';
+                                                setTimeout(() => toast.remove(), 3500);
                                             }
                                         } else {
-                                            // Direct Auto-Click if no API
+                                            // API না থাকলে অটোমেটিক লগইন বাটনে ক্লিক করার চেষ্টা করবে
                                             setTimeout(() => {
                                                 let btn = document.querySelector('button[type="submit"], button.login-btn, #loginBtn, .btn-login, button.btn');
-                                                if(btn) btn.click();
+                                                if(btn && !document.querySelector('input[placeholder*="Captcha"], input[name*="captcha"]')) {
+                                                    btn.click();
+                                                }
                                             }, 500);
                                         }
                                     };
