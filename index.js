@@ -1,12 +1,10 @@
 export default {
   async fetch(request, env, ctx) {
-    // 🛑 KV Binding চেক করা হচ্ছে
     if (!env.PORTAL_DB) {
-        return new Response("Error: KV Namespace 'PORTAL_DB' is not bound. Please check Cloudflare settings.", { status: 500 });
+        return new Response("Error: KV Namespace 'PORTAL_DB' is not bound.", { status: 500 });
     }
 
     const url = new URL(request.url);
-    const myDomain = url.hostname;
 
     // ==========================================
     // 🔐 API রাউটিং (সাইট এবং পাসওয়ার্ড সেভ করার জন্য)
@@ -15,7 +13,6 @@ export default {
         if (request.method === 'GET') {
             let data = await env.PORTAL_DB.get('portal_vault', 'json');
             if (!data) {
-                // ডাটাবেস ফাঁকা থাকলে ডিফল্ট সাইটগুলো লোড হবে
                 data = {
                     "ag.tenx365x.live": {}, "ag.all9x.com": {}, "ag.baji11.live": {},
                     "ag.baji365x.live": {}, "ag.velki123.win": {}, "ag.vellki365.app": {}
@@ -31,19 +28,16 @@ export default {
         }
     }
 
-    // কুকি চেক করে টার্গেট সাইট বের করা
     const cookieHeader = request.headers.get('Cookie') || '';
     const match = cookieHeader.match(/active_target=([^;]+)/);
     let targetSite = match ? match[1] : null;
 
     if (url.pathname === '/reset') {
         return new Response('Going back to portal...', {
-            status: 302,
-            headers: { 'Location': '/', 'Set-Cookie': 'active_target=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT' }
+            status: 302, headers: { 'Location': '/', 'Set-Cookie': 'active_target=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT' }
         });
     }
 
-    // টার্গেট না থাকলে পোর্টাল লিস্ট দেখাবে
     if (!targetSite) {
         return this.servePortal();
     }
@@ -52,7 +46,6 @@ export default {
     const API_DOMAINS = ["vrnlapi.com"]; 
     const MEDIA_AND_SCORE_DOMAINS = ["aax-eu1314.com"]; 
     const ALL_TARGETS = [...API_DOMAINS, ...MEDIA_AND_SCORE_DOMAINS]; 
-    
     const originHeader = request.headers.get("Origin") || `https://${url.host}`;
 
     const autoPackJS = (rawCode) => {
@@ -76,14 +69,7 @@ export default {
             }
             const originalFetch = window.fetch;
             window.fetch = async function(...args) {
-              try {
-                let reqUrl = args[0];
-                if (typeof reqUrl === 'string' && shouldIntercept(reqUrl)) {
-                  args[0] = proxyPrefix + reqUrl;
-                } else if (reqUrl instanceof Request && shouldIntercept(reqUrl.url)) {
-                  args[0] = new Request(proxyPrefix + reqUrl.url, reqUrl);
-                }
-              } catch(e) {}
+              try { let reqUrl = args[0]; if (typeof reqUrl === 'string' && shouldIntercept(reqUrl)) { args[0] = proxyPrefix + reqUrl; } else if (reqUrl instanceof Request && shouldIntercept(reqUrl.url)) { args[0] = new Request(proxyPrefix + reqUrl.url, reqUrl); } } catch(e) {}
               return originalFetch.apply(this, args);
             };
             const originalOpen = XMLHttpRequest.prototype.open;
@@ -122,7 +108,6 @@ export default {
       } catch (e) { return new Response("Proxy Error", { status: 500 }); }
     }
 
-    // KV থেকে ভল্ট ডাটা আনা (ইনজেকশনের জন্য)
     let vaultData = await env.PORTAL_DB.get('portal_vault', 'json') || {};
 
     const target = new URL(TARGET_DOMAIN);
@@ -156,7 +141,6 @@ export default {
 
         if (contentType.includes("text/html")) {
             const rawForceJs = `
-                // 🛑 সেশন এবং ট্যাব-ক্লোজ রিস্টার্ট চেকার 🛑
                 if (!sessionStorage.getItem('proxy_session_active')) {
                     document.cookie = 'active_target=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;'; window.location.href = '/';
                 }
@@ -175,44 +159,52 @@ export default {
                     });
                 }, 500);
 
-                // 🔐 KV ডাটাবেস থেকে ডাইরেক্ট পাসওয়ার্ড ইনজেকশন 🔐
                 window.__SERVER_VAULT__ = ${JSON.stringify(vaultData)};
 
+                // 🔐 আল্ট্রা-প্রিমিয়াম ব্লার পপআপ অটোফিল 🔐
                 setTimeout(function() {
                     const currentTargetSite = '${targetSite}';
                     const userInp = document.querySelector('#userid') || document.querySelector('input[type="text"]');
                     const passInp = document.querySelector('#password') || document.querySelector('input[type="password"]');
                     
                     if(userInp && passInp) {
-                        // ডিফল্ট ব্রাউজার সাজেস্ট অফ করার চেষ্টা
                         userInp.setAttribute('autocomplete', 'off'); passInp.setAttribute('autocomplete', 'new-password');
 
-                        // কাস্টম ড্রপডাউন UI তৈরি
-                        const dropdown = document.createElement('div');
-                        dropdown.style.cssText = 'position:absolute; display:none; background:#1C1C1E; border:1px solid #38383A; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:999999; overflow:hidden; font-family:-apple-system, sans-serif;';
-                        document.body.appendChild(dropdown);
+                        // Full width blur overlay
+                        const modalOverlay = document.createElement('div');
+                        modalOverlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); z-index:999999; display:none; align-items:center; justify-content:center; padding: 0 10px; box-sizing: border-box;';
+                        
+                        const modalContent = document.createElement('div');
+                        modalContent.style.cssText = 'background:#1C1C1E; width:100%; max-width:400px; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.6); overflow:hidden; font-family:-apple-system, sans-serif; display:flex; flex-direction:column; border: 1px solid #38383A;';
+                        
+                        modalOverlay.appendChild(modalContent);
+                        document.body.appendChild(modalOverlay);
 
-                        userInp.addEventListener('focus', function() {
+                        userInp.addEventListener('focus', function(e) {
                             let accounts = window.__SERVER_VAULT__[currentTargetSite] || {};
                             if(Object.keys(accounts).length > 0) {
-                                dropdown.innerHTML = '<div style="padding:8px 12px; font-size:11px; color:#8E8E93; background:#2C2C2E; border-bottom:1px solid #38383A; font-weight:bold; letter-spacing: 1px;">SAVED ACCOUNTS</div>';
+                                e.preventDefault();
+                                userInp.blur(); // Hide keyboard to show modal nicely
+                                
+                                modalContent.innerHTML = '<div style="padding:16px 20px; font-size:16px; color:#fff; background:#2C2C2E; border-bottom:1px solid #38383A; font-weight:600; display:flex; justify-content:space-between; align-items:center;"><span>Select Account</span><span id="close-autofill" style="color:#FF453A; cursor:pointer; font-size:14px; font-weight:bold;">Close</span></div>';
+                                
+                                let listContainer = document.createElement('div');
+                                listContainer.style.cssText = 'max-height:300px; overflow-y:auto; padding:12px;';
+                                
                                 for(let user in accounts) {
                                     let item = document.createElement('div');
-                                    item.style.cssText = 'padding:12px 15px; font-size:15px; color:#FFFFFF; display:flex; align-items:center; cursor:pointer; border-bottom:1px solid #38383A; transition: background 0.2s;';
-                                    item.innerHTML = '<span style="background:#0A84FF; color:#fff; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; margin-right:12px;">' + user.charAt(0).toUpperCase() + '</span>' + user;
+                                    item.style.cssText = 'padding:14px 16px; margin-bottom:8px; border-radius:12px; font-size:16px; color:#FFFFFF; background:#2C2C2E; display:flex; align-items:center; cursor:pointer; border:1px solid #38383A; transition:background 0.2s;';
+                                    item.innerHTML = '<svg style="width:20px;height:20px;margin-right:12px;color:#0A84FF;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' + user;
                                     
-                                    item.onmouseover = () => item.style.background = '#3A3A3C';
-                                    item.onmouseout = () => item.style.background = 'transparent';
-
-                                    item.onclick = function(e) { e.preventDefault(); userInp.value = user; passInp.value = accounts[user]; dropdown.style.display = 'none'; };
-                                    dropdown.appendChild(item);
+                                    item.onclick = function() { userInp.value = user; passInp.value = accounts[user]; modalOverlay.style.display = 'none'; };
+                                    listContainer.appendChild(item);
                                 }
-                                let rect = userInp.getBoundingClientRect();
-                                dropdown.style.top = (rect.bottom + window.scrollY + 8) + 'px'; dropdown.style.left = (rect.left + window.scrollX) + 'px'; dropdown.style.width = rect.width + 'px';
-                                dropdown.style.display = 'block';
+                                modalContent.appendChild(listContainer);
+                                modalOverlay.style.display = 'flex';
+                                
+                                document.getElementById('close-autofill').onclick = () => modalOverlay.style.display = 'none';
                             }
                         });
-                        document.addEventListener('click', function(e) { if(e.target !== userInp && !dropdown.contains(e.target)) dropdown.style.display = 'none'; });
                     }
                 }, 1000);
             `;
@@ -230,7 +222,7 @@ export default {
   },
 
   // ==========================================
-  // ফ্রন্ট-এন্ড পোর্টাল ডিজাইন (React স্টাইল ডাইনামিক UI)
+  // ফ্রন্ট-এন্ড পোর্টাল ডিজাইন (Pro SVG UI)
   // ==========================================
   servePortal() {
       const html = `
@@ -241,11 +233,11 @@ export default {
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
           <title>Gateway Portal</title>
           <style>
-              body { background-color: #000000; color: #FFFFFF; font-family: -apple-system, sans-serif; margin: 0; padding: 0; user-select: text !important; -webkit-tap-highlight-color: transparent;}
+              body { background-color: #000000; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; user-select: text !important; -webkit-tap-highlight-color: transparent;}
               .app-container { max-width: 500px; margin: 0 auto; padding: 20px; }
               .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; margin-top: 10px; }
               h1 { font-size: 28px; font-weight: 700; margin: 0; }
-              .add-btn { background: rgba(10, 132, 255, 0.15); color: #0A84FF; border: none; padding: 8px 14px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s;}
+              .add-btn { background: rgba(10, 132, 255, 0.15); color: #0A84FF; border: none; padding: 8px 14px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; gap: 4px;}
               .add-btn:active { transform: scale(0.95); }
               
               .site-list { display: flex; flex-direction: column; gap: 12px; }
@@ -256,10 +248,14 @@ export default {
               .icon-globe { width: 20px; height: 20px; color: #0A84FF; flex-shrink: 0; }
               .site-name { font-size: 16px; font-weight: 500; color: #F2F2F7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: text !important; -webkit-user-select: text !important;}
               
+              /* Premium Button Styles */
               .action-btns { display: flex; gap: 8px; align-items: center; }
-              .edit-btn { background: #2C2C2E; color: #fff; border: none; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; }
-              .edit-btn:active { background: #3A3A3C; }
-              .visit-btn { background-color: #0A84FF; color: #FFFFFF; border: none; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+              .icon-sm { width: 16px; height: 16px; flex-shrink: 0; }
+              
+              .edit-btn { background-color: #5E5CE6; color: #FFFFFF; border: none; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: transform 0.1s; }
+              .edit-btn:active { transform: scale(0.96); background-color: #4B49B8; }
+              
+              .visit-btn { background-color: #0A84FF; color: #FFFFFF; border: none; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: transform 0.1s; }
               .visit-btn:active { transform: scale(0.96); background-color: #007AFF; }
               
               /* Modal Styles */
@@ -270,20 +266,24 @@ export default {
               .close-btn { background: none; border: none; color: #FF453A; font-size: 15px; cursor: pointer; font-weight: bold; padding: 5px;}
               
               .pass-list { max-height: 200px; overflow-y: auto; margin-bottom: 15px; }
-              .pass-item { display: flex; justify-content: space-between; background: #2C2C2E; padding: 12px; border-radius: 10px; margin-bottom: 8px; align-items: center; }
-              .pass-del { background: none; border: none; color: #FF453A; cursor: pointer; font-size: 16px; padding: 5px;}
+              .pass-item { display: flex; justify-content: space-between; background: #2C2C2E; padding: 12px; border-radius: 10px; margin-bottom: 8px; align-items: center; border: 1px solid #38383A;}
+              .pass-actions { display: flex; gap: 10px; }
+              .action-icon { background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;}
+              .action-icon:active { opacity: 0.5; }
               
               .add-form input { width: 100%; background: #2C2C2E; border: 1px solid #38383A; color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-size: 15px;}
               .add-form input:focus { outline: none; border-color: #0A84FF; }
-              .add-form button { width: 100%; background: #30D158; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px;}
-              .add-form button:active { background: #28B44A; }
+              .add-form button { width: 100%; background: #30D158; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; transition: transform 0.1s;}
+              .add-form button:active { background: #28B44A; transform: scale(0.98);}
           </style>
       </head>
       <body>
           <div class="app-container">
               <div class="header">
                   <h1>Platforms</h1>
-                  <button class="add-btn" onclick="addSite()">+ Add Site</button>
+                  <button class="add-btn" onclick="addSite()">
+                      <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add Site
+                  </button>
               </div>
               <div class="site-list" id="site-list">
                  <p style="text-align:center; color:#888; font-style: italic;">Loading Data Vault...</p>
@@ -298,6 +298,7 @@ export default {
                   </div>
                   <div class="pass-list" id="pass-list"></div>
                   <div class="add-form">
+                      <input type="hidden" id="old-user">
                       <input type="text" id="new-user" placeholder="Enter Username">
                       <input type="password" id="new-pass" placeholder="Enter Password">
                       <button onclick="savePassword()">Save Credential</button>
@@ -347,8 +348,14 @@ export default {
                               <span class="site-name">\${displayName}</span>
                           </div>
                           <div class="action-btns">
-                              <button class="edit-btn" onclick="openModal('\${site}')" title="Manage Passwords">🔑</button>
-                              <button class="visit-btn" onclick="setTarget('\${site}')">GO ➔</button>
+                              <button class="edit-btn" onclick="openModal('\${site}')">
+                                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                  Edit
+                              </button>
+                              <button class="visit-btn" onclick="setTarget('\${site}')">
+                                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                  Visit
+                              </button>
                           </div>
                       </div>\`;
                   }
@@ -367,7 +374,7 @@ export default {
                   }
               }
 
-              // Long Press Delete Logic (3 Seconds)
+              // Long Press Delete Logic (১.৫ সেকেন্ড)
               let pressTimer;
               function startPress(site, el) {
                   el.parentElement.classList.add('pressing');
@@ -377,7 +384,7 @@ export default {
                           delete vaultDB[site];
                           syncData();
                       }
-                  }, 3000);
+                  }, 1500); // Changed to 1.5 Seconds
               }
               function cancelPress(el) { 
                   clearTimeout(pressTimer); 
@@ -390,15 +397,16 @@ export default {
                   window.location.href = "/";
               }
 
-              // Modal Logic for Password Manager
               function openModal(site) {
                   currentEditingSite = site;
                   document.getElementById('modal-title').innerText = site.replace(/^ag\\./i, '');
                   renderPasswords();
                   document.getElementById('pass-modal').style.display = 'flex';
               }
+              
               function closeModal() { 
                   document.getElementById('pass-modal').style.display = 'none'; 
+                  document.getElementById('old-user').value = '';
                   document.getElementById('new-user').value = '';
                   document.getElementById('new-pass').value = '';
               }
@@ -414,20 +422,47 @@ export default {
                       for (let user in accounts) {
                           pList.innerHTML += \`
                           <div class="pass-item">
-                              <div style="color: #fff; font-size: 15px;"><strong>\${user}</strong> <span style="color:#8E8E93; font-size:12px; margin-left: 5px;">(••••)</span></div>
-                              <button class="pass-del" onclick="deletePass('\${user}')" title="Delete">✖</button>
+                              <div style="color: #fff; font-size: 15px; display:flex; align-items:center;">
+                                  <svg style="width:16px;height:16px;margin-right:8px;color:#0A84FF;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                  <strong>\${user}</strong> <span style="color:#8E8E93; font-size:12px; margin-left: 6px;">(••••)</span>
+                              </div>
+                              <div class="pass-actions">
+                                  <button class="action-icon" onclick="editPass('\${user}', '\${accounts[user]}')" title="Edit">
+                                      <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="#30D158" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                  </button>
+                                  <button class="action-icon" onclick="deletePass('\${user}')" title="Delete">
+                                      <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                  </button>
+                              </div>
                           </div>\`;
                       }
                   }
               }
 
+              // Load data into inputs for editing
+              function editPass(user, pass) {
+                  document.getElementById('old-user').value = user;
+                  document.getElementById('new-user').value = user;
+                  document.getElementById('new-pass').value = pass;
+                  document.getElementById('new-user').focus();
+              }
+
               function savePassword() {
+                  const oldUser = document.getElementById('old-user').value;
                   const u = document.getElementById('new-user').value.trim();
                   const p = document.getElementById('new-pass').value.trim();
+                  
                   if (u && p) {
+                      // If username was changed during edit, delete the old one
+                      if(oldUser && oldUser !== u) {
+                          delete vaultDB[currentEditingSite][oldUser];
+                      }
                       vaultDB[currentEditingSite][u] = p;
+                      
+                      document.getElementById('old-user').value = '';
                       document.getElementById('new-user').value = '';
                       document.getElementById('new-pass').value = '';
+                      
                       syncData();
                       renderPasswords();
                   } else {
@@ -443,7 +478,6 @@ export default {
                   }
               }
 
-              // Load data on start
               window.onload = loadData;
           </script>
       </body>
