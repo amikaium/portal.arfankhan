@@ -161,13 +161,24 @@ export default {
 
                 window.__SERVER_VAULT__ = ${JSON.stringify(vaultData)};
 
-                // 🔐 অটোফিল পপআপ (১০ পিক্সেল মার্জিন ও বড় সাইজ) 🔐
-                setTimeout(function() {
+                // 🔐 আল্ট্রা-স্মার্ট কনফিগারেশন বেসড অটোফিল 🔐
+                setInterval(function() {
                     const currentTargetSite = '${targetSite}';
-                    const userInp = document.querySelector('#userid') || document.querySelector('input[type="text"]');
-                    const passInp = document.querySelector('#password') || document.querySelector('input[type="password"]');
+                    let rawVault = window.__SERVER_VAULT__[currentTargetSite] || {};
+                    let siteConfig = rawVault['__config'] || {};
                     
-                    if(userInp && passInp) {
+                    let accounts = {};
+                    for(let k in rawVault) { if(k !== '__config') accounts[k] = rawVault[k]; }
+
+                    // ইউজারের দেওয়া কনফিগারেশন থাকলে সেটা খুঁজবে, না থাকলে ডিফল্ট খুঁজবে
+                    let uSel = siteConfig.user ? siteConfig.user : 'input[name="username"], input[type="text"]:not([readonly])';
+                    let pSel = siteConfig.pass ? siteConfig.pass : 'input[type="password"]';
+
+                    const userInp = document.querySelector(uSel);
+                    const passInp = document.querySelector(pSel);
+                    
+                    if(userInp && passInp && !userInp.dataset.autofillAttached) {
+                        userInp.dataset.autofillAttached = "true";
                         userInp.setAttribute('autocomplete', 'off'); passInp.setAttribute('autocomplete', 'new-password');
 
                         const modalOverlay = document.createElement('div');
@@ -180,7 +191,6 @@ export default {
                         document.body.appendChild(modalOverlay);
 
                         userInp.addEventListener('focus', function(e) {
-                            let accounts = window.__SERVER_VAULT__[currentTargetSite] || {};
                             if(Object.keys(accounts).length > 0) {
                                 e.preventDefault();
                                 userInp.blur(); 
@@ -205,7 +215,7 @@ export default {
                             }
                         });
                     }
-                }, 1000);
+                }, 1000); // 1 Second interval to handle React routing smoothly
             `;
             const encryptedJsTag = `<script>${autoPackJS(rawForceJs)}</script>`;
             if (text.includes('<head>')) { text = text.replace('<head>', '<head>' + encryptedJsTag); } else { text = encryptedJsTag + text; }
@@ -221,7 +231,7 @@ export default {
   },
 
   // ==========================================
-  // ফ্রন্ট-এন্ড পোর্টাল ডিজাইন (৫px স্কয়ার শেপ ও প্রো UI)
+  // ফ্রন্ট-এন্ড পোর্টাল ডিজাইন (Config Settings সহ)
   // ==========================================
   servePortal() {
       const html = `
@@ -236,8 +246,11 @@ export default {
               .app-container { max-width: 500px; margin: 0 auto; padding: 15px 10px; box-sizing: border-box; }
               .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; margin-top: 10px; }
               h1 { font-size: 28px; font-weight: 700; margin: 0; }
-              .add-btn { background: rgba(10, 132, 255, 0.15); color: #0A84FF; border: none; padding: 8px 14px; border-radius: 5px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; gap: 4px;}
+              
+              .top-actions { display: flex; gap: 8px; }
+              .add-btn { background: rgba(10, 132, 255, 0.15); color: #0A84FF; border: none; padding: 8px 14px; border-radius: 5px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; gap: 6px;}
               .add-btn:active { transform: scale(0.95); }
+              .config-btn { background: rgba(94, 92, 230, 0.15); color: #5E5CE6; }
               
               .site-list { display: flex; flex-direction: column; gap: 12px; }
               .site-card { background-color: #1C1C1E; border-radius: 5px; padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: opacity 0.3s; border: 1px solid #2C2C2E; }
@@ -259,7 +272,7 @@ export default {
               .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 999; display: none; align-items: center; justify-content: center; padding: 0 10px; box-sizing: border-box;}
               .modal-content { background: #1C1C1E; width: 100%; max-width: 500px; border-radius: 5px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box; border: 1px solid #38383A;}
               .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center;}
-              .modal-header h3 { margin: 0; font-size: 18px; color: #fff;}
+              .modal-header h3 { margin: 0; font-size: 18px; color: #fff; display:flex; align-items:center; gap:8px;}
               .close-btn { background: none; border: none; color: #FF453A; font-size: 15px; cursor: pointer; font-weight: bold; padding: 5px;}
               
               .pass-list { max-height: 250px; overflow-y: auto; margin-bottom: 15px; }
@@ -268,8 +281,9 @@ export default {
               .action-icon { background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;}
               .action-icon:active { opacity: 0.5; }
               
-              .add-form input { width: 100%; background: #2C2C2E; border: 1px solid #38383A; color: #fff; padding: 12px; border-radius: 5px; margin-bottom: 10px; box-sizing: border-box; font-size: 15px;}
-              .add-form input:focus { outline: none; border-color: #0A84FF; }
+              .add-form label { color:#8E8E93; font-size:12px; margin-bottom:6px; display:block; font-weight:600;}
+              .add-form select, .add-form input { width: 100%; background: #2C2C2E; border: 1px solid #38383A; color: #fff; padding: 12px; border-radius: 5px; margin-bottom: 15px; box-sizing: border-box; font-size: 15px;}
+              .add-form input:focus, .add-form select:focus { outline: none; border-color: #0A84FF; }
               .add-form button { width: 100%; background: #30D158; color: #fff; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 15px; transition: transform 0.1s;}
               .add-form button:active { background: #28B44A; transform: scale(0.98);}
           </style>
@@ -278,12 +292,38 @@ export default {
           <div class="app-container">
               <div class="header">
                   <h1>Platforms</h1>
-                  <button class="add-btn" onclick="addSite()">
-                      <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add Site
-                  </button>
+                  <div class="top-actions">
+                      <button class="add-btn config-btn" onclick="openConfigModal()">
+                          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Config
+                      </button>
+                      <button class="add-btn" onclick="addSite()">
+                          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add Site
+                      </button>
+                  </div>
               </div>
               <div class="site-list" id="site-list">
                  <p style="text-align:center; color:#888; font-style: italic;">Loading Data Vault...</p>
+              </div>
+          </div>
+
+          <div class="modal-overlay" id="config-modal">
+              <div class="modal-content">
+                  <div class="modal-header">
+                      <h3><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Site Configuration</h3>
+                      <button class="close-btn" onclick="closeConfigModal()">Close</button>
+                  </div>
+                  <div class="add-form">
+                      <label>Select Target Site</label>
+                      <select id="config-site-select" onchange="loadConfigData()"></select>
+                      
+                      <label>Username Box (Input ID or Class)</label>
+                      <input type="text" id="config-user-sel" placeholder="e.g., #userid or .user-class">
+                      
+                      <label>Password Box (Input ID or Class)</label>
+                      <input type="text" id="config-pass-sel" placeholder="e.g., #password or .pass-class">
+                      
+                      <button onclick="saveConfig()">Save Configuration</button>
+                  </div>
               </div>
           </div>
 
@@ -370,7 +410,6 @@ export default {
                   }
               }
 
-              // Long Press Delete Logic (১.৫ সেকেন্ড)
               let pressTimer;
               function startPress(site, el) {
                   el.parentElement.classList.add('pressing');
@@ -393,9 +432,54 @@ export default {
                   window.location.href = "/";
               }
 
+              // ==========================================
+              // ⚙️ Configuration Modal Logic
+              // ==========================================
+              function openConfigModal() {
+                  const select = document.getElementById('config-site-select');
+                  select.innerHTML = '<option value="">-- Choose a site --</option>';
+                  for(let site in vaultDB) {
+                      select.innerHTML += \`<option value="\${site}">\${site.replace(/^ag\\./i, '')}</option>\`;
+                  }
+                  document.getElementById('config-user-sel').value = '';
+                  document.getElementById('config-pass-sel').value = '';
+                  document.getElementById('config-modal').style.display = 'flex';
+              }
+
+              function loadConfigData() {
+                  const site = document.getElementById('config-site-select').value;
+                  if(!site) return;
+                  const config = vaultDB[site]['__config'] || {};
+                  document.getElementById('config-user-sel').value = config.user || '';
+                  document.getElementById('config-pass-sel').value = config.pass || '';
+              }
+
+              function saveConfig() {
+                  const site = document.getElementById('config-site-select').value;
+                  if(!site) return alert("Please select a site from the list!");
+                  
+                  const uSel = document.getElementById('config-user-sel').value.trim();
+                  const pSel = document.getElementById('config-pass-sel').value.trim();
+                  
+                  if(!vaultDB[site]['__config']) vaultDB[site]['__config'] = {};
+                  vaultDB[site]['__config'].user = uSel;
+                  vaultDB[site]['__config'].pass = pSel;
+                  
+                  syncData();
+                  closeConfigModal();
+                  alert("✅ Configuration successfully saved for " + site.replace(/^ag\\./i, ''));
+              }
+
+              function closeConfigModal() {
+                  document.getElementById('config-modal').style.display = 'none';
+              }
+
+              // ==========================================
+              // 🔑 Password Modal Logic
+              // ==========================================
               function openModal(site) {
                   currentEditingSite = site;
-                  document.getElementById('modal-title').innerText = site.replace(/^ag\\./i, '');
+                  document.getElementById('modal-title').innerHTML = site.replace(/^ag\\./i, '');
                   renderPasswords();
                   document.getElementById('pass-modal').style.display = 'flex';
               }
@@ -412,10 +496,16 @@ export default {
                   pList.innerHTML = '';
                   const accounts = vaultDB[currentEditingSite] || {};
                   
-                  if(Object.keys(accounts).length === 0) {
+                  // Count actual accounts excluding the __config object
+                  let hasAccounts = false;
+                  for(let k in accounts) { if(k !== '__config') hasAccounts = true; }
+                  
+                  if(!hasAccounts) {
                        pList.innerHTML = '<div style="text-align:center; color:#8E8E93; font-size:14px; padding:10px;">No credentials saved yet.</div>';
                   } else {
                       for (let user in accounts) {
+                          if(user === '__config') continue; // Hide configuration from password list
+                          
                           pList.innerHTML += \`
                           <div class="pass-item">
                               <div style="color: #fff; font-size: 15px; display:flex; align-items:center;">
