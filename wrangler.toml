@@ -1,3 +1,7 @@
 name = "portal"
 main = "index.js"
 compatibility_date = "2026-04-22"
+
+[[kv_namespaces]]
+binding = "PORTAL_DB"
+id = "2e04df09b1a9431e856d6efd343628d0"
