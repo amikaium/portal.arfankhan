@@ -161,20 +161,25 @@ export default {
 
                 window.__SERVER_VAULT__ = ${JSON.stringify(vaultData)};
 
-                // 🚀 React State Force Injector (মহা শক্তিশালী কোড) 🚀
-                const forceReactValue = (element, value) => {
-                    if (!element) return;
-                    // React এর ডিফল্ট প্রপার্টি বাইপাস করে সরাসরি নেটিভ ভ্যালু সেট করা
-                    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                    nativeInputValueSetter.call(element, value);
+                // 🚀 React-Buster Autofill Engine 🚀
+                function simulateHumanTyping(element, text) {
+                    if(!element) return;
                     
-                    // ফ্রেমওয়ার্ককে বোঝানো যে টাইপ করা হয়েছে
+                    // 1. Bypass React's Value Tracker
+                    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+                    if (nativeInputValueSetter) {
+                        nativeInputValueSetter.call(element, text);
+                    } else {
+                        element.value = text;
+                    }
+                    
+                    // 2. Dispatch all possible events
                     element.dispatchEvent(new Event('input', { bubbles: true }));
                     element.dispatchEvent(new Event('change', { bubbles: true }));
-                    element.dispatchEvent(new Event('blur', { bubbles: true }));
-                };
+                    element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+                    element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }));
+                }
 
-                // 🔐 আল্ট্রা-স্মার্ট কনফিগারেশন বেসড অটোফিল 🔐
                 setInterval(function() {
                     const currentTargetSite = '${targetSite}';
                     let rawVault = window.__SERVER_VAULT__[currentTargetSite] || {};
@@ -185,6 +190,7 @@ export default {
 
                     let uSel = siteConfig.user ? siteConfig.user : 'input[name="username"], input[type="text"]:not([readonly])';
                     let pSel = siteConfig.pass ? siteConfig.pass : 'input[type="password"]';
+                    let loginApiUrl = siteConfig.loginApi || '';
 
                     const userInp = document.querySelector(uSel);
                     const passInp = document.querySelector(pSel);
@@ -217,10 +223,15 @@ export default {
                                     item.style.cssText = 'padding:18px 16px; margin-bottom:10px; border-radius:5px; font-size:18px; color:#FFFFFF; background:#2C2C2E; display:flex; align-items:center; cursor:pointer; border:1px solid #38383A; transition:background 0.2s; font-weight:500;';
                                     item.innerHTML = '<svg style="width:22px;height:22px;margin-right:12px;color:#0A84FF;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' + user;
                                     
-                                    // 💥 এখানে শক্তিশালী ফোর্স ইভেন্ট কল করা হয়েছে 💥
                                     item.onclick = function() { 
-                                        forceReactValue(userInp, user); 
-                                        forceReactValue(passInp, accounts[user]); 
+                                        simulateHumanTyping(userInp, user);
+                                        simulateHumanTyping(passInp, accounts[user]);
+                                        
+                                        // Optional: If Login API provided, user can build logic here
+                                        if(loginApiUrl) {
+                                            console.log("Custom Login API detected: ", loginApiUrl);
+                                        }
+
                                         modalOverlay.style.display = 'none'; 
                                     };
                                     listContainer.appendChild(item);
@@ -329,17 +340,20 @@ export default {
                       <h3><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Site Configuration</h3>
                       <button class="close-btn" onclick="closeConfigModal()">Close</button>
                   </div>
-                  <div class="add-form">
+                  <div class="add-form" style="max-height: 60vh; overflow-y: auto;">
                       <label>Select Target Site</label>
                       <select id="config-site-select" onchange="loadConfigData()"></select>
                       
-                      <label>Username Box (Input ID or Class)</label>
-                      <input type="text" id="config-user-sel" placeholder="e.g., #userid or .user-class">
+                      <label>Username Box Selector</label>
+                      <input type="text" id="config-user-sel" placeholder="e.g. #username or .user-input">
                       
-                      <label>Password Box (Input ID or Class)</label>
-                      <input type="text" id="config-pass-sel" placeholder="e.g., #password or .pass-class">
+                      <label>Password Box Selector</label>
+                      <input type="text" id="config-pass-sel" placeholder="e.g. #password or .pass-input">
                       
-                      <button onclick="saveConfig()">Save Configuration</button>
+                      <label>Login API URL (Optional - Bypasses UI Login)</label>
+                      <input type="text" id="config-login-api" placeholder="/api/v1/auth/login">
+                      
+                      <button onclick="saveConfig()" style="margin-top:10px;">Save Configuration</button>
                   </div>
               </div>
           </div>
@@ -460,6 +474,7 @@ export default {
                   }
                   document.getElementById('config-user-sel').value = '';
                   document.getElementById('config-pass-sel').value = '';
+                  document.getElementById('config-login-api').value = '';
                   document.getElementById('config-modal').style.display = 'flex';
               }
 
@@ -469,6 +484,7 @@ export default {
                   const config = vaultDB[site]['__config'] || {};
                   document.getElementById('config-user-sel').value = config.user || '';
                   document.getElementById('config-pass-sel').value = config.pass || '';
+                  document.getElementById('config-login-api').value = config.loginApi || '';
               }
 
               function saveConfig() {
@@ -477,10 +493,12 @@ export default {
                   
                   const uSel = document.getElementById('config-user-sel').value.trim();
                   const pSel = document.getElementById('config-pass-sel').value.trim();
+                  const apiSel = document.getElementById('config-login-api').value.trim();
                   
                   if(!vaultDB[site]['__config']) vaultDB[site]['__config'] = {};
                   vaultDB[site]['__config'].user = uSel;
                   vaultDB[site]['__config'].pass = pSel;
+                  vaultDB[site]['__config'].loginApi = apiSel;
                   
                   syncData();
                   closeConfigModal();
@@ -513,7 +531,6 @@ export default {
                   pList.innerHTML = '';
                   const accounts = vaultDB[currentEditingSite] || {};
                   
-                  // Count actual accounts excluding the __config object
                   let hasAccounts = false;
                   for(let k in accounts) { if(k !== '__config') hasAccounts = true; }
                   
@@ -521,7 +538,7 @@ export default {
                        pList.innerHTML = '<div style="text-align:center; color:#8E8E93; font-size:14px; padding:10px;">No credentials saved yet.</div>';
                   } else {
                       for (let user in accounts) {
-                          if(user === '__config') continue;
+                          if(user === '__config') continue; 
                           
                           pList.innerHTML += \`
                           <div class="pass-item">
